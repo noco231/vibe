@@ -69,9 +69,93 @@
   <!-- ==== ПРИЛОЖЕНИЕ ==== -->
   <div class="app">
 
+    <!-- Меню действий с чатом -->
+  <div class="chat-menu-overlay" id="chatMenuOverlay"></div>
+  <div class="chat-menu" id="chatMenu">
+    <div class="chat-menu-handle"></div>
+    <div class="chat-menu-title" id="chatMenuTitle">Чат</div>
+    <button class="chat-menu-btn" id="menuPin">
+      <span class="chat-menu-icon">📌</span>
+      <span class="chat-menu-text">Закрепить</span>
+    </button>
+    <button class="chat-menu-btn" id="menuBlock">
+      <span class="chat-menu-icon">🚫</span>
+      <span class="chat-menu-text">Заблокировать</span>
+    </button>
+    <button class="chat-menu-btn danger" id="menuDelete">
+      <span class="chat-menu-icon">🗑️</span>
+      <span class="chat-menu-text">Удалить</span>
+    </button>
+    <button class="chat-menu-btn cancel" id="menuCancel">
+      <span class="chat-menu-text">Отмена</span>
+    </button>
+  </div>
+
+    <!-- Меню создания: группа / канал -->
+  <div class="create-menu-overlay" id="createMenuOverlay"></div>
+  <div class="create-menu" id="createMenu">
+
+    <div class="chat-menu-handle"></div>
+    <div class="chat-menu-title">Создать</div>
+
+    <button class="chat-menu-btn" id="createGroupBtn">
+      <span class="chat-menu-icon">👥</span>
+      <span class="chat-menu-text">Новая группа</span>
+    </button>
+
+    <button class="chat-menu-btn" id="createChannelBtn">
+      <span class="chat-menu-icon">📢</span>
+      <span class="chat-menu-text">Новый канал</span>
+    </button>
+
+    <button class="chat-menu-btn cancel" id="createCancel">
+      <span class="chat-menu-text">Отмена</span>
+    </button>
+  </div>
+
+    <!-- ЭКРАН СОЗДАНИЯ ГРУППЫ/КАНАЛА -->
+  <div class="create-page" id="createPage">
+    <header class="create-page-header">
+      <button class="icon-btn" id="createBackBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
+      <h2 id="createPageTitle">Новая группа</h2>
+    </header>
+
+    <div class="create-page-content">
+      <!-- Аватарка -->
+      <div class="create-avatar-block">
+        <div class="create-avatar" id="createAvatarPreview">👥</div>
+        <input type="file" id="createAvatarInput" accept="image/*" hidden>
+        <button class="btn" id="createAvatarBtn">📷 Загрузить фото</button>
+      </div>
+
+      <!-- Название -->
+      <div class="form-block">
+        <label class="form-label">Название</label>
+        <input type="text" id="createNameInput" placeholder="Например: Семья" maxlength="40">
+        <div class="form-hint" id="createNameStatus"></div>
+      </div>
+
+      <!-- Участники -->
+      <div class="form-block">
+        <label class="form-label">Участники</label>
+        <div class="create-members" id="createMembers"></div>
+        <div class="form-hint" id="createMembersStatus"></div>
+      </div>
+    </div>
+
+    <footer class="create-page-footer">
+      <button class="btn primary" id="createSubmitBtn" disabled>Создать</button>
+    </footer>
+  </div>
+
     <!-- ЭКРАН 1: СПИСОК ЧАТОВ -->
     <section class="screen screen-chats" id="screenChats">
-      <header class="top-bar">
+            <header class="top-bar">
         <button class="icon-btn" id="menuBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="3" y1="6" x2="21" y2="6"/>
@@ -79,6 +163,14 @@
             <line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
+
+        <button class="icon-btn plus-btn" id="createBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+
         <button class="icon-btn" id="searchBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="11" cy="11" r="7"/>
@@ -112,13 +204,13 @@
           </svg>
         </button>
 
-        <div class="chat-user">
-          <div class="avatar small" id="peerAvatar">?</div>
-          <div>
-            <div class="chat-user-name" id="peerName">...</div>
-            <div class="chat-user-status" id="peerStatus">…</div>
-          </div>
-        </div>
+        <div class="chat-user" id="peerInfoBlock" style="cursor:pointer;">
+  <div class="avatar small" id="peerAvatar">?</div>
+  <div>
+    <div class="chat-user-name" id="peerName">...</div>
+    <div class="chat-user-status" id="peerStatus">…</div>
+  </div>
+</div>
 
         <div class="chat-header-actions">
           <button class="icon-btn" id="videoBtn">
