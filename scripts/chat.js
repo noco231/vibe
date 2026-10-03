@@ -635,16 +635,6 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
 
   if (window.innerWidth < 768) showChatScreen();
 
-  if (morphStartRect && morphData) {
-    setTimeout(() => {
-      const target = document.getElementById("peerAvatar");
-      if (target && target.getBoundingClientRect().width > 0) {
-        morphAvatarWithRect(morphStartRect, morphData);
-      }
-    }, 60);
-  }
-}
-
 function updatePeerStatus(peerUid) {
   const peer = allUsers[peerUid];
   if (peer) updatePeerStatusFromLastSeen(peer.lastSeen);
