@@ -1,4 +1,4 @@
-// scripts/chat.js — Личные чаты + группы + онлайн + ответы + реакции + меню + галочки + morph
+// scripts/chat.js — Личные чаты + группы + онлайн + ответы + реакции + меню + галочки
 
 // Экраны
 const screenChatsEl = document.getElementById("screenChats");
@@ -87,7 +87,6 @@ let longPressTimer = null;
 let peerTypingRef = null;
 let typingTimeout = null;
 let myTypingState = false;
-phGhost = null;
 
 // Кэш информации о группах
 const chatInfoCache = {};
@@ -258,7 +257,7 @@ function renderChatList() {
   chatListEl.innerHTML = "";
 
   const chatEntries = Object.entries(myChats)
-    .filter(([chatId, chat]) => !chat.deleted)   // ← пропускаем удалённые
+    .filter(([chatId, chat]) => !chat.deleted)
     .sort((a, b) => {
       const aP = a[1].pinned ? 1 : 0, bP = b[1].pinned ? 1 : 0;
       if (aP !== bP) return bP - aP;
@@ -439,7 +438,6 @@ menuDelete.addEventListener("click", () => {
   if (isPrivate) {
     db.ref("users/" + currentUser.uid + "/chats/" + chatId).remove();
   } else {
-    // Группа — ставим флаг deleted, чтобы не возвращалась
     db.ref("users/" + currentUser.uid + "/chats/" + chatId).update({
       deleted: true,
       lastMessage: "",
@@ -505,18 +503,6 @@ searchInput.addEventListener("input", () => {
 
 // ============ ОТКРЫТИЕ ЧАТА ПО ID ============
 function openChatById(chatId, isPrivate, sourceAvatarEl) {
-  let morphStartRect = null;
-  let morphData = null;
-  if (sourceAvatarEl) {
-    morphStartRect = sourceAvatarEl.getBoundingClientRect();
-    const sStyle = window.getComputedStyle(sourceAvatarEl);
-    morphData = {
-      bgImage: sStyle.backgroundImage,
-      bg: sourceAvatarEl.style.background || sStyle.background,
-      text: sourceAvatarEl.textContent || ""
-    };
-  }
-
   let peerUid = null;
   let displayName = "?";
 
@@ -561,8 +547,6 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
     }
   }
 
-    peerAvatarEl.style.opacity = "1";
-
   // Статус в шапке
   if (isPrivate) {
     if (peerStatusRef) peerStatusRef.off();
@@ -576,7 +560,7 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
     peerStatusEl.style.color = "var(--text-dim)";
   }
 
-    // Проверка прав для канала: писать могут только админы
+  // Проверка прав для канала
   const info = chatInfoCache[chatId] || {};
   const isChannel = info.type === "channel";
   const isAdmin = info.admins && info.admins[currentUser.uid];
@@ -634,6 +618,7 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
   }
 
   if (window.innerWidth < 768) showChatScreen();
+}
 
 function updatePeerStatus(peerUid) {
   const peer = allUsers[peerUid];
@@ -678,7 +663,6 @@ function sendMessage() {
   const chat = myChats[currentPeer.chatId] || {};
   if (chat.blocked) { alert("Чат заблокирован."); return; }
 
-  // Проверка: если канал и я не админ — нельзя писать
   if (!currentPeer.isPrivate) {
     const info = chatInfoCache[currentPeer.chatId] || {};
     if (info.type === "channel" && !(info.admins && info.admins[currentUser.uid])) {
@@ -939,7 +923,6 @@ backBtn.addEventListener("click", () => {
   if (peerTypingRef) { peerTypingRef.off(); peerTypingRef = null; }
   setTyping(false);
   currentPeer = null;
-    // Возвращаем поле ввода (на случай, если было скрыто для канала)
   const chatFooter = document.querySelector(".chat-footer");
   if (chatFooter) chatFooter.style.display = "flex";
   showListScreen();
