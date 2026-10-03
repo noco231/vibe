@@ -87,10 +87,7 @@ let longPressTimer = null;
 let peerTypingRef = null;
 let typingTimeout = null;
 let myTypingState = false;
-
-// Morph
-let morphTimeout = null;
-let currentMorphGhost = null;
+phGhost = null;
 
 // Кэш информации о группах
 const chatInfoCache = {};
