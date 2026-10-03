@@ -1033,57 +1033,6 @@ function attachSwipeToReply(wrap, msg) {
   wrap.addEventListener("touchcancel", onEnd);
 }
 
-// ============ MORPH-АВАТАРКА ============
-function morphAvatarWithRect(srcRect, srcData) {
-  const targetEl = document.getElementById("peerAvatar");
-  if (!targetEl || !srcRect) return;
-
-  if (morphTimeout) clearTimeout(morphTimeout);
-  if (currentMorphGhost) { currentMorphGhost.remove(); currentMorphGhost = null; }
-  targetEl.style.opacity = "1";
-
-  const tgtRect = targetEl.getBoundingClientRect();
-  if (tgtRect.width === 0 || tgtRect.height === 0) return;
-
-  const ghost = document.createElement("div");
-  ghost.className = "morph-ghost";
-  currentMorphGhost = ghost;
-
-  if (srcData.bgImage && srcData.bgImage !== "none") {
-    ghost.style.backgroundImage = srcData.bgImage;
-    ghost.style.backgroundSize = "cover";
-    ghost.style.backgroundPosition = "center";
-  } else {
-    ghost.style.background = srcData.bg;
-  }
-
-  ghost.style.top = srcRect.top + "px";
-  ghost.style.left = srcRect.left + "px";
-  ghost.style.width = srcRect.width + "px";
-  ghost.style.height = srcRect.height + "px";
-  ghost.textContent = srcData.text;
-
-  document.body.appendChild(ghost);
-  targetEl.style.opacity = "0";
-
-  requestAnimationFrame(() => {
-    ghost.style.top = (tgtRect.top - 14) + "px";
-    ghost.style.left = (tgtRect.left - 1.7) + "px";
-    ghost.style.width = tgtRect.width + "px";
-    ghost.style.height = tgtRect.height + "px";
-    ghost.style.fontSize = "16px";
-  });
-
-  morphTimeout = setTimeout(() => {
-    if (currentMorphGhost === ghost) {
-      ghost.remove();
-      currentMorphGhost = null;
-    }
-    const t = document.getElementById("peerAvatar");
-    if (t) t.style.opacity = "1";
-  }, 500);
-}
-
 // ============ УТИЛИТА: сжатие изображения ============
 function resizeImageToBase64(file, maxSize, quality) {
   return new Promise((resolve, reject) => {
