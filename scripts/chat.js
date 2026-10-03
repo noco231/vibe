@@ -561,9 +561,7 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
     }
   }
 
-  if (morphTimeout) clearTimeout(morphTimeout);
-  if (currentMorphGhost) { currentMorphGhost.remove(); currentMorphGhost = null; }
-  peerAvatarEl.style.opacity = "1";
+    peerAvatarEl.style.opacity = "1";
 
   // Статус в шапке
   if (isPrivate) {
