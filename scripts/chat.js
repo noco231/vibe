@@ -1219,3 +1219,4 @@ createSubmitBtn.addEventListener("click", async () => {
     createSubmitBtn.textContent = "Создать";
   }
 });
+}
