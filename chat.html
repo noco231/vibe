@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Messenger</title>
+  <link rel="stylesheet" href="style/chat.css">
+  <script src="scripts/theme.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f7cf7">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .then((reg) => console.log("✅ Service Worker зарегистрирован:", reg.scope))
+          .catch((err) => console.warn("❌ Ошибка SW:", err));
+      });
+    }
+  </script>
+<body>
+
+  <!-- Фоновые пятна -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- Затемнение за drawer -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+
+  <!-- ==== БОКОВАЯ ПАНЕЛЬ ==== -->
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-avatar" id="drawerAvatar">?</div>
+      <div class="drawer-user">
+        <div class="drawer-name" id="drawerEmail">...</div>
+        <div class="drawer-sub">в сети</div>
+      </div>
+    </div>
+
+    <!-- Меню навигации -->
+    <nav class="drawer-menu">
+      <a href="profile.html" class="drawer-item">
+        <span class="drawer-icon">👤</span>
+        <span>Профиль</span>
+      </a>
+      <a href="settings.html" class="drawer-item">
+        <span class="drawer-icon">⚙️</span>
+        <span>Настройки</span>
+      </a>
+      <a href="about.html" class="drawer-item">
+        <span class="drawer-icon">ℹ️</span>
+        <span>О приложении</span>
+      </a>
+    </nav>
+
+    <div class="drawer-footer">
+      <button class="drawer-item danger" id="drawerLogout">
+        <span class="drawer-icon">🚪</span>
+        <span>Выйти</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ==== ПРИЛОЖЕНИЕ ==== -->
+  <div class="app">
+
+    <!-- ЭКРАН 1: СПИСОК ЧАТОВ -->
+    <section class="screen screen-chats" id="screenChats">
+      <header class="top-bar">
+        <button class="icon-btn" id="menuBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="searchBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="title-row">
+        <h1>Чаты</h1>
+        <span class="subtitle" id="messagesCount">— выбери собеседника</span>
+      </div>
+
+            <!-- Панель поиска (скрыта, открывается по лупе) -->
+      <div class="search-panel" id="searchPanel">
+        <input type="text" id="searchInput" placeholder="Поиск по email или нику...">
+        <ul class="search-results" id="searchResults"></ul>
+      </div>
+
+      <!-- Список чатов -->
+      <ul class="chat-list" id="chatList"></ul>
+    </section>
+
+    <!-- ЭКРАН 2: ЧАТ -->
+    <section class="screen screen-chat" id="screenChat" style="display:none;">
+      <header class="chat-header">
+        <button class="icon-btn back-btn" id="backBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+
+        <div class="chat-user">
+          <div class="avatar small" id="peerAvatar">?</div>
+          <div>
+            <div class="chat-user-name" id="peerName">...</div>
+            <div class="chat-user-status" id="peerStatus">…</div>
+          </div>
+        </div>
+
+        <div class="chat-header-actions">
+          <button class="icon-btn" id="videoBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <polygon points="23 7 16 12 23 17 23 7"/>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="callBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="messages" id="messages"></div>
+
+       <footer class="chat-footer">
+        <div class="reply-preview" id="replyPreview" style="display:none;">
+          <div class="reply-bar"></div>
+          <div class="reply-content">
+            <div class="reply-name" id="replyName">—</div>
+            <div class="reply-text" id="replyText">—</div>
+          </div>
+          <button class="reply-close" id="replyClose">✕</button>
+        </div>
+        <div class="chat-footer-row">
+        <input type="text" id="messageInput" placeholder="Type a message...">
+        <button class="send-btn" id="sendBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <script src="scripts/firebase-config.js"></script>
+  <script src="scripts/nav.js"></script>
+  <script src="scripts/chat.js"></script>
+</body>
+</html>
