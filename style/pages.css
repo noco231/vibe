@@ -333,3 +333,16 @@ body.light .btn.primary {
   background: var(--accent-grad);
   color: #fff;
 }
+/* Профиль другого пользователя */
+.user-nick {
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 10px;
+}
+.user-status {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 4px;
+}
