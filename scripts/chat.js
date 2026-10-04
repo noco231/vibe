@@ -1826,7 +1826,7 @@ function showPreview() {
   const previewUrl = URL.createObjectURL(recordedBlob);
   circleVideo.srcObject = null;
   circleVideo.src = previewUrl;
-  circleVideo.muted = false;
+  circleVideo.muted = true;
   circleVideo.loop = true;
   circleVideo.play().catch(() => {});
 
