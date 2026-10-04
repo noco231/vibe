@@ -1,4 +1,4 @@
-// scripts/chat.js — Личные чаты + группы + онлайн + ответы + реакции + меню + галочки
+// scripts/chat.js — Личные чаты + группы + онлайн + ответы + реакции + меню + галочки + morph
 
 // Экраны
 const screenChatsEl = document.getElementById("screenChats");
@@ -72,6 +72,26 @@ const menuBlock       = document.getElementById("menuBlock");
 const menuDelete      = document.getElementById("menuDelete");
 const menuCancel      = document.getElementById("menuCancel");
 
+// Видео-кружки
+const circleBtn = document.getElementById("circleBtn");
+const circleModal = document.getElementById("circleModal");
+const circleOverlay = document.getElementById("circleOverlay");
+const circleVideo = document.getElementById("circleVideo");
+const circleTimer = document.getElementById("circleTimer");
+const circleRecord = document.getElementById("circleRecord");
+const circleHint = document.getElementById("circleHint");
+const circlePreviewControls = document.getElementById("circlePreviewControls");
+const circleCancel = document.getElementById("circleCancel");
+const circleSend = document.getElementById("circleSend");
+
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordStartTime = 0;
+let recordTimerInterval = null;
+let recordedBlob = null;
+const MAX_RECORD_SECONDS = 15;
+
 let currentUser = null;
 let currentPeer = null;
 let messagesRef = null;
@@ -117,6 +137,18 @@ auth.onAuthStateChanged(user => {
 
   loadAllUsers();
   loadMyChats();
+        // Проверяем, пришёл ли пользователь по ссылке-приглашению
+  const urlParams = new URLSearchParams(window.location.search);
+  const joinFromUrl = urlParams.get("join");
+  const joinFromStorage = localStorage.getItem("pendingJoin");
+  const joinChatId = joinFromUrl || joinFromStorage;
+
+  if (joinChatId) {
+    setTimeout(() => {
+      joinChatById(joinChatId);
+      localStorage.removeItem("pendingJoin");
+    }, 1500);
+  }
 
   const params = new URLSearchParams(window.location.search);
   const openUid = params.get("open");
@@ -257,7 +289,7 @@ function renderChatList() {
   chatListEl.innerHTML = "";
 
   const chatEntries = Object.entries(myChats)
-    .filter(([chatId, chat]) => !chat.deleted)
+    .filter(([chatId, chat]) => !chat.deleted)   // ← пропускаем удалённые
     .sort((a, b) => {
       const aP = a[1].pinned ? 1 : 0, bP = b[1].pinned ? 1 : 0;
       if (aP !== bP) return bP - aP;
@@ -417,10 +449,9 @@ menuBlock.addEventListener("click", () => {
   closeChatMenu();
 });
 
-menuDelete.addEventListener("click", () => {
+menuDelete.addEventListener("click", async () => {
   if (!activeMenuChatId) return;
   const chatId = activeMenuChatId;
-  const chat = myChats[chatId] || {};
   const isPrivate = isPrivateChatId(chatId);
 
   let displayName = "чат";
@@ -433,20 +464,78 @@ menuDelete.addEventListener("click", () => {
     displayName = info.name || "группа";
   }
 
-  if (!confirm(`Удалить чат с ${displayName}?`)) return;
-
+  // ==== ЛИЧНЫЙ ЧАТ ====
   if (isPrivate) {
+    if (!confirm(`Удалить чат с ${displayName}?`)) return;
     db.ref("users/" + currentUser.uid + "/chats/" + chatId).remove();
-  } else {
+    closeChatMenu();
+    return;
+  }
+
+  // ==== ГРУППА / КАНАЛ ====
+  const info = chatInfoCache[chatId] || {};
+  const isAdmin = info.admins && info.admins[currentUser.uid];
+  const isCreator = info.createdBy === currentUser.uid;
+
+  // Если не админ — только «скрыть у себя»
+  if (!isAdmin) {
+    if (!confirm(`Скрыть группу «${displayName}» у себя?`)) return;
     db.ref("users/" + currentUser.uid + "/chats/" + chatId).update({
       deleted: true,
       lastMessage: "",
       lastTime: 0,
       unread: 0
     });
+    closeChatMenu();
+    return;
   }
 
-  closeChatMenu();
+  // Админ — спрашиваем что делать
+  const members = info.members ? Object.keys(info.members) : [];
+  const choice = confirm(
+    `Удалить «${displayName}» у ВСЕХ ${members.length} участников?\n\n` +
+    `OK — удалить у всех (канал пропадёт навсегда)\n` +
+    `Отмена — только скрыть у себя`
+  );
+
+  if (!choice) {
+    // Только у себя
+    db.ref("users/" + currentUser.uid + "/chats/" + chatId).update({
+      deleted: true,
+      lastMessage: "",
+      lastTime: 0,
+      unread: 0
+    });
+    closeChatMenu();
+    return;
+  }
+
+  // ==== УДАЛЯЕМ У ВСЕХ ====
+  try {
+    const updates = {};
+
+    // 1. Удаляем у каждого участника
+    members.forEach(uid => {
+      updates["users/" + uid + "/chats/" + chatId] = null;
+    });
+
+    // 2. Удаляем сам чат целиком (info + messages + typing)
+    updates["chats/" + chatId] = null;
+
+    await db.ref().update(updates);
+
+    alert(`✅ «${displayName}» удалён у всех участников`);
+    closeChatMenu();
+
+    // Закрываем чат, если он открыт
+    if (currentPeer && currentPeer.chatId === chatId) {
+      currentPeer = null;
+      showListScreen();
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Ошибка удаления: " + err.message);
+  }
 });
 
 // ============ ПОИСК ============
@@ -501,7 +590,6 @@ searchInput.addEventListener("input", () => {
   });
 });
 
-// ============ ОТКРЫТИЕ ЧАТА ПО ID ============
 function openChatById(chatId, isPrivate, sourceAvatarEl) {
   let peerUid = null;
   let displayName = "?";
@@ -547,6 +635,8 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
     }
   }
 
+    peerAvatarEl.style.opacity = "1";
+
   // Статус в шапке
   if (isPrivate) {
     if (peerStatusRef) peerStatusRef.off();
@@ -560,7 +650,7 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
     peerStatusEl.style.color = "var(--text-dim)";
   }
 
-  // Проверка прав для канала
+    // Проверка прав для канала: писать могут только админы
   const info = chatInfoCache[chatId] || {};
   const isChannel = info.type === "channel";
   const isAdmin = info.admins && info.admins[currentUser.uid];
@@ -595,6 +685,12 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
     updateMessage(snapshot.key, snapshot.val());
   });
 
+    // Слушаем удаление сообщений
+  messagesRef.on("child_removed", snapshot => {
+    const wrap = document.querySelector(`.message-wrap[data-msg-id="${snapshot.key}"]`);
+    if (wrap) wrap.remove();
+  });
+
   messagesRef.once("value").then(snap => {
     const messages = snap.val() || {};
     const updates = {};
@@ -609,10 +705,14 @@ function openChatById(chatId, isPrivate, sourceAvatarEl) {
 
   db.ref("users/" + currentUser.uid + "/chats/" + chatId + "/unread").set(null);
 
-  if (peerInfoBlock) {
+    if (peerInfoBlock) {
     peerInfoBlock.onclick = () => {
       if (isPrivate && peerUid) {
+        // Личный чат — открываем профиль собеседника
         window.location.href = "user.html?uid=" + peerUid;
+      } else {
+        // Группа/канал — открываем "О чате"
+        window.location.href = "group.html?id=" + chatId;
       }
     };
   }
@@ -663,6 +763,7 @@ function sendMessage() {
   const chat = myChats[currentPeer.chatId] || {};
   if (chat.blocked) { alert("Чат заблокирован."); return; }
 
+  // Проверка: если канал и я не админ — нельзя писать
   if (!currentPeer.isPrivate) {
     const info = chatInfoCache[currentPeer.chatId] || {};
     if (info.type === "channel" && !(info.admins && info.admins[currentUser.uid])) {
@@ -742,6 +843,9 @@ replyCloseEl.addEventListener("click", hideReplyPreview);
 
 // ============ СООБЩЕНИЯ ============
 function renderMessage(msgId, msg) {
+  // Если сообщение удалено у меня — не показываем
+  if (msg.deletedFor && msg.deletedFor[currentUser.uid]) return;
+
   const wrap = document.createElement("div");
   wrap.className = "message-wrap";
   if (msg.uid === currentUser.uid) wrap.classList.add("mine");
@@ -758,8 +862,27 @@ function renderMessage(msgId, msg) {
         <div class="msg-reply-text">${escapeHtml(msg.replyTo.text || "")}</div>
       </div>`;
   }
-  inner += `<div class="text">${escapeHtml(msg.text)}</div>`;
+
+  // Ссылки в тексте становятся кликабельными
+  inner += `<div class="text">${linkify(msg.text || "")}</div>`;
+
+  // Видео-кружок (если есть) — ДОБАВЛЯЕМ ДО innerHTML!
+  if (msg.circle) {
+    inner += `
+      <div class="msg-circle" data-circle="${msgId}">
+        <video src="${msg.circle}" preload="metadata" playsinline></video>
+        <div class="circle-play">▶</div>
+      </div>`;
+  }
+
   msgEl.innerHTML = inner;
+
+  // Клик по ссылке не открывает панель действий
+  msgEl.querySelectorAll("a").forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  });
 
   msgEl.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -796,6 +919,25 @@ function renderMessage(msgId, msg) {
   renderReaction(wrap, msgId, msg);
   messagesEl.appendChild(wrap);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  // Клик по кружку — воспроизведение / пауза
+  const circleEl = msgEl.querySelector(".msg-circle");
+  if (circleEl) {
+    const vid = circleEl.querySelector("video");
+    circleEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (vid.paused) {
+        vid.play();
+        circleEl.classList.add("playing");
+      } else {
+        vid.pause();
+        circleEl.classList.remove("playing");
+      }
+    });
+    vid.addEventListener("ended", () => {
+      circleEl.classList.remove("playing");
+    });
+  }
 }
 
 function updateMessage(msgId, msg) {
@@ -846,25 +988,18 @@ function toggleReaction(msgId, meReacted) {
 }
 
 // ============ ПАНЕЛЬ ДЕЙСТВИЙ ============
+// ============ ПАНЕЛЬ ДЕЙСТВИЙ НА СООБЩЕНИИ ============
+// ============ ПАНЕЛЬ ДЕЙСТВИЙ НА СООБЩЕНИИ ============
 function openActionsMenu(wrap, msgId, msg, msgEl) {
   document.querySelectorAll(".msg-actions").forEach(el => el.remove());
 
   const menu = document.createElement("div");
   menu.className = "msg-actions";
 
-  const reactBtn = document.createElement("button");
-  reactBtn.className = "msg-action-btn";
-  const meReacted = msg.reactions && msg.reactions[currentUser.uid];
-  reactBtn.textContent = meReacted ? "❤" : "🤍";
-  reactBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleReaction(msgId, meReacted);
-    menu.remove();
-  });
-
+  // 1. Ответить
   const replyBtn = document.createElement("button");
   replyBtn.className = "msg-action-btn";
-  replyBtn.textContent = "↩ Ответить";
+  replyBtn.innerHTML = `<span class="msg-action-icon">↩</span><span>Ответить</span>`;
   replyBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     const authorName = msg.uid === currentUser.uid
@@ -876,21 +1011,81 @@ function openActionsMenu(wrap, msgId, msg, msgEl) {
     menu.remove();
   });
 
-  menu.appendChild(reactBtn);
+  // 2. Копировать
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "msg-action-btn";
+  copyBtn.innerHTML = `<span class="msg-action-icon">📋</span><span>Копировать</span>`;
+  copyBtn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(msg.text || "");
+      copyBtn.innerHTML = `<span class="msg-action-icon">✅</span><span>Скопировано</span>`;
+      setTimeout(() => menu.remove(), 500);
+    } catch (err) {
+      alert("Не удалось скопировать: " + err.message);
+      menu.remove();
+    }
+  });
+
+  // 3. Переслать
+  const forwardBtn = document.createElement("button");
+  forwardBtn.className = "msg-action-btn";
+  forwardBtn.innerHTML = `<span class="msg-action-icon">➡</span><span>Переслать</span>`;
+  forwardBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.remove();
+    openForwardPicker(msg);
+  });
+
+  // 4. Удалить
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "msg-action-btn danger";
+  deleteBtn.innerHTML = `<span class="msg-action-icon">🗑</span><span>Удалить</span>`;
+  deleteBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.remove();
+    deleteMessage(msgId, msg);
+  });
+
+  // 5. Реакция ❤
+  const meReacted = msg.reactions && msg.reactions[currentUser.uid];
+  const reactBtn = document.createElement("button");
+  reactBtn.className = "msg-action-btn";
+  reactBtn.innerHTML = `<span class="msg-action-icon">${meReacted ? "❤" : "🤍"}</span><span>${meReacted ? "Убрать" : "Реакция"}</span>`;
+  reactBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleReaction(msgId, meReacted);
+    menu.remove();
+  });
+
   menu.appendChild(replyBtn);
+  menu.appendChild(copyBtn);
+  menu.appendChild(forwardBtn);
+  menu.appendChild(deleteBtn);
+  menu.appendChild(reactBtn);
+
   document.body.appendChild(menu);
 
+  // ==== Позиционирование ====
   const msgRect = msgEl.getBoundingClientRect();
   const menuRect = menu.getBoundingClientRect();
+
   let top = msgRect.top - menuRect.height - 8;
   let left = msgRect.left;
+
+  // Если не влезает сверху — показываем под сообщением
   if (top < 10) top = msgRect.bottom + 8;
-  if (left + menuRect.width > window.innerWidth - 10) left = window.innerWidth - menuRect.width - 10;
+
+  // Если вылезает справа — сдвигаем влево
+  if (left + menuRect.width > window.innerWidth - 10) {
+    left = window.innerWidth - menuRect.width - 10;
+  }
   if (left < 10) left = 10;
 
   menu.style.top = top + "px";
   menu.style.left = left + "px";
 
+  // Закрытие при клике вне
   setTimeout(() => {
     const closeHandler = (ev) => {
       if (!menu.contains(ev.target)) {
@@ -923,6 +1118,7 @@ backBtn.addEventListener("click", () => {
   if (peerTypingRef) { peerTypingRef.off(); peerTypingRef = null; }
   setTyping(false);
   currentPeer = null;
+    // Возвращаем поле ввода (на случай, если было скрыто для канала)
   const chatFooter = document.querySelector(".chat-footer");
   if (chatFooter) chatFooter.style.display = "flex";
   showListScreen();
@@ -1202,3 +1398,531 @@ createSubmitBtn.addEventListener("click", async () => {
     createSubmitBtn.textContent = "Создать";
   }
 });
+// ============ ССЫЛКИ В ТЕКСТЕ ============
+function linkify(text) {
+  // Сначала экранируем HTML-теги (защита от XSS)
+  const escaped = escapeHtml(text);
+
+  // Регулярка ловит http:// https:// www. telegram и т.п.
+  const urlRegex = /((https?:\/\/|www\.)[^\s<]+)/gi;
+
+  return escaped.replace(urlRegex, (url) => {
+    // Убираем хвостовые точки, запятые и скобки
+    let clean = url.replace(/[.,;:!?)\]}]+$/, "");
+    let trailing = url.slice(clean.length);
+
+    // Если без http:// — добавим для href, но покажем как есть
+    const href = clean.startsWith("http") ? clean : "https://" + clean;
+
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="msg-link">${clean}</a>${trailing}`;
+  });
+}
+// ============ ПРИСОЕДИНЕНИЕ ПО ССЫЛКЕ ============
+async function joinChatById(chatId) {
+  if (!currentUser || !chatId) return;
+
+  try {
+    const infoSnap = await db.ref("chats/" + chatId + "/info").once("value");
+    if (!infoSnap.exists()) {
+      alert("Чат не найден. Возможно, ссылка устарела.");
+      cleanJoinParam();
+      return;
+    }
+
+    const info = infoSnap.val();
+    const members = info.members || {};
+
+    // Уже участник?
+    if (members[currentUser.uid]) {
+      // Просто открываем
+      openChatById(chatId, false);
+      cleanJoinParam();
+      return;
+    }
+
+    // Спрашиваем подтверждение
+    const typeName = info.type === "channel" ? "канал" : "группу";
+    const ok = confirm(`Вступить в ${typeName} «${info.name}»?`);
+    if (!ok) {
+      cleanJoinParam();
+      return;
+    }
+
+    // Добавляем себя в участники
+    await db.ref("chats/" + chatId + "/info/members/" + currentUser.uid).set(true);
+
+    // Пишем себе в список чатов
+    await db.ref("users/" + currentUser.uid + "/chats/" + chatId).set({
+      lastMessage: "Вы вступили в чат",
+      lastTime: Date.now(),
+      unread: 0,
+      chatType: info.type,
+      chatName: info.name
+    });
+
+    alert(`✅ Вы вступили в ${typeName} «${info.name}»`);
+    cleanJoinParam();
+
+    // Открываем чат
+    setTimeout(() => openChatById(chatId, false), 300);
+
+  } catch (err) {
+    console.error("Ошибка присоединения:", err);
+    alert("Не удалось присоединиться: " + err.message);
+    cleanJoinParam();
+  }
+}
+
+function cleanJoinParam() {
+  // Убираем ?join=... из URL
+  if (window.history.replaceState) {
+    const url = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, url);
+  }
+}
+// ============ УДАЛЕНИЕ СООБЩЕНИЯ ============
+async function deleteMessage(msgId, msg) {
+  if (!messagesRef) return;
+
+  const isMine = msg.uid === currentUser.uid;
+  if (!isMine) {
+    alert("Можно удалять только свои сообщения.");
+    return;
+  }
+
+  // Спрашиваем — удалить у всех или только у себя
+  const isGroup = currentPeer && !currentPeer.isPrivate;
+  let choice = "self";
+
+  if (isGroup) {
+    const forAll = confirm(
+      "Удалить сообщение?\n\n" +
+      "OK — удалить у ВСЕХ участников\n" +
+      "Отмена — удалить только у себя"
+    );
+    choice = forAll ? "all" : "self";
+  } else {
+    const forAll = confirm(
+      "Удалить сообщение?\n\n" +
+      "OK — удалить у всех\n" +
+      "Отмена — удалить только у себя"
+    );
+    choice = forAll ? "all" : "self";
+  }
+
+  try {
+    if (choice === "all") {
+      await messagesRef.child(msgId).remove();
+      // Строка сама исчезнет через child_removed (нужно добавить слушатель)
+    } else {
+      // Помечаем «удалено у меня»
+      await messagesRef.child(msgId + "/deletedFor/" + currentUser.uid).set(true);
+      // Скрываем у себя в DOM
+      const wrap = document.querySelector(`.message-wrap[data-msg-id="${msgId}"]`);
+      if (wrap) wrap.remove();
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Ошибка удаления: " + err.message);
+  }
+}
+
+// ============ ВЫБОР ЧАТА ДЛЯ ПЕРЕСЫЛКИ ============
+function openForwardPicker(msg) {
+  // Удаляем старое окно, если есть
+  document.querySelectorAll(".forward-modal").forEach(el => el.remove());
+
+  const modal = document.createElement("div");
+  modal.className = "forward-modal";
+
+  const overlay = document.createElement("div");
+  overlay.className = "forward-modal-overlay";
+
+  const box = document.createElement("div");
+  box.className = "forward-modal-box";
+
+  const title = document.createElement("div");
+  title.className = "forward-modal-title";
+  title.textContent = "Переслать в...";
+  box.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "forward-modal-list";
+
+  // Собираем список чатов
+  const chatEntries = Object.entries(myChats)
+    .filter(([cid, chat]) => !chat.deleted)
+    .sort((a, b) => (b[1].lastTime || 0) - (a[1].lastTime || 0));
+
+  if (chatEntries.length === 0) {
+    list.innerHTML = `<div class="forward-modal-empty">Пока нет чатов</div>`;
+  }
+
+  chatEntries.forEach(([cid, chat]) => {
+    const isPrivate = isPrivateChatId(cid);
+
+    let displayName = "?";
+    let avatarStyle = "";
+    let avatarText = "";
+
+    if (isPrivate) {
+      const peerUid = getPeerUidFromPrivateChatId(cid);
+      const peer = allUsers[peerUid] || {};
+      displayName = peer.nick || peer.email || "?";
+      const letter = displayName[0].toUpperCase();
+      const hue = [...peerUid].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+      avatarStyle = peer.avatarBase64
+        ? `background-image:url(${peer.avatarBase64}); background-size:cover; background-position:center;`
+        : `background:linear-gradient(135deg,hsl(${hue},70%,55%),hsl(${(hue+40)%360},70%,45%));`;
+      avatarText = peer.avatarBase64 ? "" : letter;
+    } else {
+      const info = chatInfoCache[cid] || {};
+      displayName = info.name || chat.chatName || "Группа";
+      const letter = displayName[0].toUpperCase();
+      const hue = [...cid].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+      avatarStyle = info.avatarBase64
+        ? `background-image:url(${info.avatarBase64}); background-size:cover; background-position:center;`
+        : `background:linear-gradient(135deg,hsl(${hue},70%,55%),hsl(${(hue+40)%360},70%,45%));`;
+      avatarText = info.avatarBase64 ? "" : letter;
+    }
+
+    const item = document.createElement("div");
+    item.className = "forward-modal-item";
+    item.innerHTML = `
+      <div class="avatar small" style="${avatarStyle}">${avatarText}</div>
+      <div class="forward-modal-name">${escapeHtml(displayName)}</div>
+    `;
+
+    item.addEventListener("click", async () => {
+      try {
+        await forwardMessage(msg, cid);
+        modal.remove();
+      } catch (err) {
+        console.error(err);
+        alert("Ошибка пересылки: " + err.message);
+      }
+    });
+
+    list.appendChild(item);
+  });
+
+  box.appendChild(list);
+
+  // Кнопка отмены
+  const cancel = document.createElement("button");
+  cancel.className = "forward-modal-cancel";
+  cancel.textContent = "Отмена";
+  cancel.addEventListener("click", () => modal.remove());
+  box.appendChild(cancel);
+
+  modal.appendChild(overlay);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  overlay.addEventListener("click", () => modal.remove());
+}
+
+// ============ САМА ПЕРЕСЫЛКА ============
+async function forwardMessage(msg, targetChatId) {
+  const now = Date.now();
+  const text = msg.text || "";
+
+  // 1. Отправляем сообщение в целевой чат
+  await db.ref("chats/" + targetChatId + "/messages").push({
+    uid: currentUser.uid,
+    text: text,
+    timestamp: now,
+    readBy: {},
+    forwarded: true
+  });
+
+  // 2. Обновляем «последнее сообщение» у себя
+  const targetChat = myChats[targetChatId] || {};
+  await db.ref("users/" + currentUser.uid + "/chats/" + targetChatId).update({
+    lastMessage: "➡ " + text.slice(0, 30),
+    lastTime: now,
+    unread: 0
+  });
+
+  // 3. Обновляем у собеседника/участников
+  const targetInfo = chatInfoCache[targetChatId] || {};
+  const isPrivate = isPrivateChatId(targetChatId);
+
+  if (isPrivate) {
+    const peerUid = getPeerUidFromPrivateChatId(targetChatId);
+    await db.ref("users/" + peerUid + "/chats/" + currentUser.uid).update({
+      lastMessage: "➡ " + text.slice(0, 30),
+      lastTime: now,
+      peerName: currentUser.email
+    });
+    await db.ref("users/" + peerUid + "/chats/" + currentUser.uid + "/unread").transaction(c => (c || 0) + 1);
+  } else {
+    const members = targetInfo.members || {};
+    const updates = {};
+    Object.keys(members).forEach(uid => {
+      if (uid === currentUser.uid) return;
+      updates["users/" + uid + "/chats/" + targetChatId + "/lastMessage"] = "➡ " + text.slice(0, 30);
+      updates["users/" + uid + "/chats/" + targetChatId + "/lastTime"] = now;
+    });
+    if (Object.keys(updates).length > 0) await db.ref().update(updates);
+    Object.keys(members).forEach(uid => {
+      if (uid === currentUser.uid) return;
+      db.ref("users/" + uid + "/chats/" + targetChatId + "/unread").transaction(c => (c || 0) + 1);
+    });
+  }
+
+  alert("✅ Переслано");
+}
+// ============================================================
+//   ВИДЕО-КРУЖКИ
+// ============================================================
+
+circleBtn.addEventListener("click", openCircleModal);
+circleOverlay.addEventListener("click", closeCircleModal);
+circleCancel.addEventListener("click", closeCircleModal);
+circleRecord.addEventListener("click", toggleRecording);
+circleSend.addEventListener("click", sendCircle);
+
+async function openCircleModal() {
+  if (!currentPeer || !messagesRef) {
+    alert("Открой чат сначала");
+    return;
+  }
+
+  try {
+    // Запрашиваем камеру и микрофон (фронтальная)
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: 480, height: 480 },
+      audio: true
+    });
+
+    circleVideo.srcObject = mediaStream;
+    circleVideo.muted = true;
+
+    circleModal.classList.add("open");
+    resetCircleUI();
+  } catch (err) {
+    console.error(err);
+    alert("Не удалось получить доступ к камере: " + err.message);
+  }
+}
+
+function closeCircleModal() {
+  // Останавливаем запись
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+
+  // Останавливаем камеру
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+
+  // Чистим таймер
+  if (recordTimerInterval) {
+    clearInterval(recordTimerInterval);
+    recordTimerInterval = null;
+  }
+
+  circleVideo.srcObject = null;
+  circleModal.classList.remove("open");
+  resetCircleUI();
+}
+
+function resetCircleUI() {
+  circleRecord.classList.remove("recording");
+  circleRecord.style.display = "grid";
+  circleHint.style.display = "block";
+  circlePreviewControls.style.display = "none";
+  circleTimer.textContent = "0:00 / 0:15";
+  recordedChunks = [];
+  recordedBlob = null;
+  recordStartTime = 0;
+}
+
+function toggleRecording() {
+  // Если уже пишем — стоп
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    stopRecording();
+    return;
+  }
+
+  startRecording();
+}
+
+function startRecording() {
+  if (!mediaStream) return;
+
+  recordedChunks = [];
+
+  // Выбираем поддерживаемый MIME-тип
+  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+    ? "video/webm;codecs=vp9,opus"
+    : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+    ? "video/webm;codecs=vp8,opus"
+    : "video/webm";
+
+  try {
+    mediaRecorder = new MediaRecorder(mediaStream, {
+      mimeType: mimeType,
+      videoBitsPerSecond: 300000,  // 300 Кбит/с — маленький размер
+      audioBitsPerSecond: 32000
+    });
+  } catch (err) {
+    console.error(err);
+    alert("Запись видео не поддерживается: " + err.message);
+    return;
+  }
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
+    showPreview();
+  };
+
+  mediaRecorder.start();
+  recordStartTime = Date.now();
+
+  circleRecord.classList.add("recording");
+  circleHint.textContent = "Запись идёт... Нажми ещё раз, чтобы остановить";
+
+  // Таймер
+  recordTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+    const mm = Math.floor(elapsed / 60);
+    const ss = String(elapsed % 60).padStart(2, "0");
+    circleTimer.textContent = `${mm}:${ss} / 0:15`;
+
+    // Автостоп через 15 секунд
+    if (elapsed >= MAX_RECORD_SECONDS) {
+      stopRecording();
+    }
+  }, 200);
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+  }
+
+  if (recordTimerInterval) {
+    clearInterval(recordTimerInterval);
+    recordTimerInterval = null;
+  }
+
+  circleRecord.classList.remove("recording");
+  circleRecord.style.display = "none";
+  circleHint.style.display = "none";
+}
+
+function showPreview() {
+  if (!recordedBlob) return;
+
+  // Показываем превью кружка
+  const previewUrl = URL.createObjectURL(recordedBlob);
+  circleVideo.srcObject = null;
+  circleVideo.src = previewUrl;
+  circleVideo.muted = false;
+  circleVideo.loop = true;
+  circleVideo.play().catch(() => {});
+
+  circlePreviewControls.style.display = "flex";
+  circleTimer.textContent = "Проверь и отправь";
+
+  // Освобождаем камеру (она уже не нужна)
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+}
+
+async function sendCircle() {
+  if (!recordedBlob) {
+    alert("Сначала запиши кружок");
+    return;
+  }
+
+  if (recordedBlob.size > 900000) {  // ~900 КБ максимум
+    alert("Кружок слишком большой. Попробуй короче.");
+    return;
+  }
+
+  circleSend.disabled = true;
+  circleSend.textContent = "Отправка...";
+
+  try {
+    // Конвертируем blob → base64
+    const base64 = await blobToBase64(recordedBlob);
+
+    const now = Date.now();
+    const msgData = {
+      uid: currentUser.uid,
+      text: "",
+      circle: base64,           // видео-кружок в base64
+      mimeType: recordedBlob.type,
+      timestamp: now,
+      readBy: {}
+    };
+
+    if (replyTo) {
+      msgData.replyTo = { text: replyTo.text, uid: replyTo.uid, name: replyTo.name };
+      replyTo = null;
+      hideReplyPreview();
+    }
+
+    await messagesRef.push(msgData);
+
+    // Обновляем последнее сообщение
+    await db.ref("users/" + currentUser.uid + "/chats/" + currentPeer.chatId).update({
+      lastMessage: "🎥 Кружок",
+      lastTime: now,
+      unread: 0
+    });
+
+    if (currentPeer.isPrivate && currentPeer.uid) {
+      await db.ref("users/" + currentPeer.uid + "/chats/" + currentPeer.chatId).update({
+        lastMessage: "🎥 Кружок",
+        lastTime: now,
+        peerName: currentUser.email
+      });
+      db.ref("users/" + currentPeer.uid + "/chats/" + currentPeer.chatId + "/unread")
+        .transaction(c => (c || 0) + 1);
+    } else {
+      const info = chatInfoCache[currentPeer.chatId] || {};
+      const members = info.members || {};
+      const updates = {};
+      Object.keys(members).forEach(uid => {
+        if (uid === currentUser.uid) return;
+        updates["users/" + uid + "/chats/" + currentPeer.chatId + "/lastMessage"] = "🎥 Кружок";
+        updates["users/" + uid + "/chats/" + currentPeer.chatId + "/lastTime"] = now;
+      });
+      if (Object.keys(updates).length > 0) await db.ref().update(updates);
+      Object.keys(members).forEach(uid => {
+        if (uid === currentUser.uid) return;
+        db.ref("users/" + uid + "/chats/" + currentPeer.chatId + "/unread")
+          .transaction(c => (c || 0) + 1);
+      });
+    }
+
+    closeCircleModal();
+  } catch (err) {
+    console.error(err);
+    alert("Ошибка отправки: " + err.message);
+  } finally {
+    circleSend.disabled = false;
+    circleSend.textContent = "Отправить";
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
