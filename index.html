@@ -10,6 +10,15 @@
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
+<script>
+  // Если пришли по ссылке-приглашению — запоминаем chatId
+  const urlParams = new URLSearchParams(window.location.search);
+  const joinChatId = urlParams.get("join");
+  if (joinChatId) {
+    localStorage.setItem("pendingJoin", joinChatId);
+    console.log("Запомнили join:", joinChatId);
+  }
+</script>
 <body>
 
   <div class="bg-blobs">
