@@ -238,17 +238,48 @@
           </div>
           <button class="reply-close" id="replyClose">✕</button>
         </div>
-        <div class="chat-footer-row">
-        <input type="text" id="messageInput" placeholder="Type a message...">
-        <button class="send-btn" id="sendBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
+                <div class="chat-footer-row">
+          <button class="attach-btn" id="circleBtn" title="Видео-кружок">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            </svg>
+          </button>
+
+          <input type="text" id="messageInput" placeholder="Type a message...">
+
+          <button class="send-btn" id="sendBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
       </footer>
-    </section>
+      <!-- ============ МОДАЛКА ЗАПИСИ ВИДЕО-КРУЖКА ============ -->
+  <div class="circle-modal" id="circleModal">
+    <div class="circle-modal-overlay" id="circleOverlay"></div>
+
+    <div class="circle-modal-box">
+      <div class="circle-video-wrap">
+        <video id="circleVideo" autoplay playsinline muted></video>
+        <div class="circle-timer" id="circleTimer">0:00 / 0:15</div>
+      </div>
+
+      <div class="circle-controls">
+        <button class="circle-btn-record" id="circleRecord">
+          <div class="circle-btn-inner"></div>
+        </button>
+        <div class="circle-hint" id="circleHint">Нажми, чтобы записать</div>
+      </div>
+
+      <div class="circle-preview-controls" id="circlePreviewControls" style="display:none;">
+        <button class="circle-btn-cancel" id="circleCancel">Отмена</button>
+        <button class="circle-btn-send" id="circleSend">Отправить</button>
+      </div>
+    </div>
   </div>
+    </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
