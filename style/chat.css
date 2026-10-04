@@ -386,38 +386,84 @@ body.light .msg-ticks.read { color: #3b82f6; }
   border-color: rgba(236,72,153,0.5);
 }
 
-/* ==== ПАНЕЛЬ ДЕЙСТВИЙ ==== */
+/* ==== ПАНЕЛЬ ДЕЙСТВИЙ (вертикальная, с надписями) ==== */
 .msg-actions {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
   padding: 6px;
-  background: rgba(20, 26, 45, 0.95);
+  background: rgba(20, 26, 45, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  border-radius: 14px;
+  border-radius: 16px;
   position: fixed;
   z-index: 100;
   animation: popIn 0.2s ease-out;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  min-width: 170px;
 }
+
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.9); }
   to   { opacity: 1; transform: scale(1); }
 }
+
 .msg-action-btn {
-  padding: 8px 12px;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  font-size: 14.5px;
+  font-weight: 500;
   background: transparent;
   border: none;
   color: #fff;
   cursor: pointer;
   border-radius: 10px;
   transition: 0.15s;
+  text-align: left;
   white-space: nowrap;
+  width: 100%;
 }
-.msg-action-btn:active { background: rgba(255,255,255,0.12); }
+.msg-action-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.msg-action-btn:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.msg-action-icon {
+  font-size: 18px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.msg-action-btn.danger {
+  color: #f87171;
+}
+.msg-action-btn.danger:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* Светлая тема */
+body.light .msg-actions {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(214, 51, 132, 0.15);
+}
+body.light .msg-action-btn {
+  color: #4a1230;
+}
+body.light .msg-action-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+body.light .msg-action-btn.danger {
+  color: #ef4444;
+}
+body.light .msg-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
 
 /* ==== ПОЛЕ ВВОДА ==== */
 .chat-footer {
@@ -1289,4 +1335,350 @@ body.light .create-page .btn {
 body.light .create-page .btn.primary {
   background: var(--accent-grad);
   color: #fff;
+}
+.admin-badge {
+  font-size: 14px;
+  margin-left: 6px;
+}
+/* ==== ССЫЛКИ В СООБЩЕНИЯХ ==== */
+.msg-link {
+  color: #6b8dff;
+  text-decoration: underline;
+  text-decoration-color: rgba(107, 141, 255, 0.5);
+  text-underline-offset: 2px;
+  word-break: break-all;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.msg-link:hover {
+  color: #8ba5ff;
+}
+.msg-link:active {
+  opacity: 0.7;
+}
+
+/* Для своих сообщений (синий фон) — светлее */
+.message-wrap.mine .msg-link {
+  color: #fff;
+  text-decoration-color: rgba(255, 255, 255, 0.6);
+}
+.message-wrap.mine .msg-link:hover {
+  color: #e0e7ff;
+}
+
+/* Светлая тема */
+body.light .msg-link {
+  color: #4f7cf7;
+}
+body.light .msg-link:hover {
+  color: #3b5fd9;
+}
+body.light .message-wrap.mine .msg-link {
+  color: #fff;
+}
+/* Удалить (кнопка красная) */
+.msg-action-btn.danger {
+  color: #f87171;
+}
+
+/* ============ МОДАЛКА ПЕРЕСЫЛКИ ============ */
+.forward-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+}
+.forward-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.forward-modal-box {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  background: rgba(20, 26, 45, 0.98);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  padding: 20px 16px 24px;
+  animation: forwardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+@keyframes forwardIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.forward-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 12px;
+}
+.forward-modal-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.forward-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.forward-modal-item:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+.forward-modal-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forward-modal-empty {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+  padding: 20px;
+}
+.forward-modal-cancel {
+  margin-top: 12px;
+  padding: 14px;
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.forward-modal-cancel:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.light .forward-modal-box {
+  background: rgba(255, 255, 255, 0.98);
+}
+/* ==== КНОПКА ВИДЕО-КРУЖКА ==== */
+.attach-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: 0.2s;
+  flex-shrink: 0;
+}
+.attach-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text);
+}
+.attach-btn svg { width: 20px; height: 20px; }
+
+/* ==== МОДАЛКА ЗАПИСИ КРУЖКА ==== */
+.circle-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.circle-modal.open { display: flex; }
+
+.circle-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.circle-modal-box {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.circle-video-wrap {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7),
+              inset 0 0 0 4px rgba(255, 255, 255, 0.15);
+}
+
+.circle-video-wrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* зеркальное отражение (как селфи) */
+  border-radius: 50%;
+}
+
+.circle-timer {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: blur(10px);
+}
+
+/* Кнопка записи */
+.circle-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.circle-btn-record {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: 0.2s;
+  position: relative;
+}
+
+.circle-btn-record .circle-btn-inner {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #ef4444;
+  transition: 0.2s;
+}
+
+.circle-btn-record.recording .circle-btn-inner {
+  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+}
+
+.circle-btn-record.recording {
+  animation: pulseRecord 1.4s ease-in-out infinite;
+}
+
+@keyframes pulseRecord {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  50%      { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+}
+
+.circle-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+/* Кнопки превью */
+.circle-preview-controls {
+  display: flex;
+  gap: 14px;
+}
+
+.circle-btn-cancel,
+.circle-btn-send {
+  padding: 14px 28px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: 0.2s;
+}
+
+.circle-btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.circle-btn-cancel:active { background: rgba(255, 255, 255, 0.2); }
+
+.circle-btn-send {
+  background: var(--accent-grad);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(79, 124, 247, 0.5);
+}
+.circle-btn-send:active { transform: scale(0.96); }
+
+/* ==== КРУЖОК В СООБЩЕНИИ ==== */
+.msg-circle {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  margin-bottom: 4px;
+}
+
+.msg-circle video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.msg-circle .circle-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 32px;
+  transition: 0.2s;
+  pointer-events: none;
+}
+.msg-circle.playing .circle-play { opacity: 0; }
+
+/* Прогресс-кольцо вокруг кружка */
+.msg-circle .circle-progress {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Светлая тема */
+body.light .attach-btn {
+  background: rgba(255, 255, 255, 0.7);
+  color: #4a1230;
 }
