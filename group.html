@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>О чате — Vibe</title>
+  <link rel="stylesheet" href="style/pages.css">
+  <script src="scripts/theme.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f7cf7">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+</head>
+<body>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="page">
+    <header class="page-header">
+      <a href="chat.html" class="icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </a>
+      <h1 id="pageTitle">О чате</h1>
+    </header>
+
+    <div class="content">
+      <!-- Аватарка и название -->
+      <div class="avatar-block">
+        <div class="avatar-big" id="groupAvatar">?</div>
+        <div class="user-nick" id="groupName">...</div>
+        <div class="user-status" id="groupInfo">...</div>
+      </div>
+
+      <!-- Ссылка-приглашение -->
+      <div class="form-block">
+        <label class="form-label">Ссылка-приглашение</label>
+        <div class="form-row">
+          <input type="text" id="inviteLink" disabled>
+          <button class="btn primary" id="copyLinkBtn" style="flex:0 0 auto; padding:15px 20px;">Копировать</button>
+        </div>
+        <div class="form-hint" id="copyStatus"></div>
+      </div>
+
+      <!-- Список участников -->
+      <div class="form-block">
+        <label class="form-label">Участники <span id="membersCount"></span></label>
+        <div class="create-members" id="membersList"></div>
+      </div>
+
+      <!-- Выйти (заглушка) -->
+      <button class="btn danger" id="leaveBtn">🚪 Выйти из чата</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="scripts/firebase-config.js"></script>
+  <script src="scripts/nav.js"></script>
+  <script src="scripts/group.js"></script>
+</body>
+</html>
