@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <script src="scripts/theme.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Настройки — My Messenger</title>
@@ -37,17 +38,22 @@
     </header>
 
     <div class="content">
-      <div class="setting-row">
-        <div>
-          <div class="setting-title">Тёмная тема</div>
-          <div class="setting-desc">Переключить цвета приложения</div>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="themeToggle" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
 
+      <!-- ВЫБОР ТЕМЫ -->
+            <div class="setting-row" style="display:block;">
+        <div class="setting-title" style="margin-bottom:14px;">Тема оформления</div>
+        <div class="theme-grid">
+          <button class="theme-item" data-theme="blue"   style="--c:#3b82f6;" title="Синяя"></button>
+          <button class="theme-item" data-theme="red"    style="--c:#ef4444;" title="Красная"></button>
+          <button class="theme-item" data-theme="green"  style="--c:#22c55e;" title="Зелёная"></button>
+          <button class="theme-item" data-theme="orange" style="--c:#f97316;" title="Оранжевая"></button>
+          <button class="theme-item" data-theme="purple" style="--c:#a855f7;" title="Фиолетовая"></button>
+          <button class="theme-item" data-theme="black"  style="--c:#111111;" title="Чёрная"></button>
+          <button class="theme-item" data-theme="white"  style="--c:#ffffff;" title="Белая"></button>
+          <button class="theme-item" data-theme="yellow" style="--c:#eab308;" title="Жёлтая"></button>
+        </div>
+      </div>
+    
       <div class="setting-row disabled">
         <div>
           <div class="setting-title">Уведомления</div>
