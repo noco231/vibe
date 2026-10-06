@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <script src="scripts/theme.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>My Messenger</title>
   <link rel="stylesheet" href="style/chat.css">
-  <script src="scripts/theme.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4f7cf7">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -70,22 +70,36 @@
   <div class="app">
 
     <!-- Меню действий с чатом -->
-  <div class="chat-menu-overlay" id="chatMenuOverlay"></div>
-  <div class="chat-menu" id="chatMenu">
+    <div class="chat-menu-overlay" id="chatMenuOverlay"></div>
+    <div class="chat-menu" id="chatMenu">
     <div class="chat-menu-handle"></div>
     <div class="chat-menu-title" id="chatMenuTitle">Чат</div>
+
+    <button class="chat-menu-btn" id="menuSearch">
+      <span class="chat-menu-icon">🔍</span>
+      <span class="chat-menu-text">Поиск в чате</span>
+    </button>
+
+    <button class="chat-menu-btn" id="menuCall">
+      <span class="chat-menu-icon">📞</span>
+      <span class="chat-menu-text">Позвонить</span>
+    </button>
+
     <button class="chat-menu-btn" id="menuPin">
       <span class="chat-menu-icon">📌</span>
       <span class="chat-menu-text">Закрепить</span>
     </button>
+
     <button class="chat-menu-btn" id="menuBlock">
       <span class="chat-menu-icon">🚫</span>
       <span class="chat-menu-text">Заблокировать</span>
     </button>
+
     <button class="chat-menu-btn danger" id="menuDelete">
       <span class="chat-menu-icon">🗑️</span>
       <span class="chat-menu-text">Удалить</span>
     </button>
+
     <button class="chat-menu-btn cancel" id="menuCancel">
       <span class="chat-menu-text">Отмена</span>
     </button>
@@ -136,7 +150,8 @@
       <!-- Название -->
       <div class="form-block">
         <label class="form-label">Название</label>
-        <input type="text" id="createNameInput" placeholder="Например: Семья" maxlength="40">
+        <input type="text" id="createNameInput" placeholder="Например: Семья" maxlength="40"
+       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         <div class="form-hint" id="createNameStatus"></div>
       </div>
 
@@ -186,7 +201,8 @@
 
             <!-- Панель поиска (скрыта, открывается по лупе) -->
       <div class="search-panel" id="searchPanel">
-        <input type="text" id="searchInput" placeholder="Поиск по email или нику...">
+        <input type="text" id="chatSearchInput" placeholder="Поиск в чате..."
+       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         <ul class="search-results" id="searchResults"></ul>
       </div>
 
@@ -197,6 +213,15 @@
     <!-- ЭКРАН 2: ЧАТ -->
     <section class="screen screen-chat" id="screenChat" style="display:none;">
       <header class="chat-header">
+              <!-- Панель поиска по чату -->
+      <div class="chat-search-panel" id="chatSearchPanel">
+        <input type="text" id="searchInput" placeholder="Поиск по email или нику..."
+       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <span class="chat-search-count" id="chatSearchCount"></span>
+        <button class="chat-search-nav" id="chatSearchPrev" title="Назад">↑</button>
+        <button class="chat-search-nav" id="chatSearchNext" title="Вперёд">↓</button>
+        <button class="chat-search-close" id="chatSearchClose" title="Закрыть">✕</button>
+      </div>
         <button class="icon-btn back-btn" id="backBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="19" y1="12" x2="5" y2="12"/>
@@ -212,16 +237,12 @@
   </div>
 </div>
 
-        <div class="chat-header-actions">
-          <button class="icon-btn" id="videoBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <polygon points="23 7 16 12 23 17 23 7"/>
-              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-            </svg>
-          </button>
-          <button class="icon-btn" id="callBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                <div class="chat-header-actions">
+          <button class="icon-btn" id="chatMenuBtn" title="Меню">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
             </svg>
           </button>
         </div>
@@ -246,7 +267,16 @@
             </svg>
           </button>
 
-          <input type="text" id="messageInput" placeholder="Type a message...">
+          <input 
+  type="text" 
+  id="messageInput" 
+  placeholder="Type a message..."
+  autocomplete="off"
+  autocorrect="off"
+  autocapitalize="off"
+  spellcheck="false"
+  enterkeyhint="send"
+>
 
           <button class="send-btn" id="sendBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
