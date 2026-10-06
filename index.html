@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <script src="scripts/theme.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vibe — Вход</title>
@@ -39,14 +40,14 @@
 
     <!-- Вкладка: по ссылке -->
     <div class="auth-tab-content active" data-tab="link">
-      <input type="email" id="email" placeholder="Email">
+      <input type="email" id="email" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <button id="sendLinkBtn">Отправить ссылку</button>
     </div>
 
     <!-- Вкладка: по паролю -->
     <div class="auth-tab-content" data-tab="password">
-      <input type="email" id="emailPwd" placeholder="Email">
-      <input type="password" id="password" placeholder="Пароль">
+      <input type="email" id="emailPwd" placeholder="Email" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input type="password" id="password" placeholder="Пароль" autocomplete="new-password">
       <button id="loginBtn">Войти</button>
       <button id="registerBtn" class="secondary">Зарегистрироваться</button>
     </div>
