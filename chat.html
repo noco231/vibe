@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <script src="scripts/theme.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>My Messenger</title>
+  <link rel="stylesheet" href="style/chat.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f7cf7">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "2d956226-2dc7-44d7-bcaa-55bb7ec14fb9",
+        allowLocalhostAsSecureOrigin: true,
+        serviceWorkerPath: "/sw.js",
+        notifyButton: { enable: false }
+      });
+    });
+  </script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .then((reg) => console.log("✅ Service Worker зарегистрирован:", reg.scope))
+          .catch((err) => console.warn("❌ Ошибка SW:", err));
+      });
+    }
+  </script>
+</head>
+<body>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-avatar" id="drawerAvatar">?</div>
+      <div class="drawer-user">
+        <div class="drawer-name" id="drawerEmail">...</div>
+        <div class="drawer-sub">в сети</div>
+      </div>
+    </div>
+
+    <nav class="drawer-menu">
+      <a href="profile.html" class="drawer-item">
+        <span class="drawer-icon">👤</span>
+        <span>Профиль</span>
+      </a>
+      <a href="settings.html" class="drawer-item">
+        <span class="drawer-icon">⚙️</span>
+        <span>Настройки</span>
+      </a>
+      <a href="about.html" class="drawer-item">
+        <span class="drawer-icon">ℹ️</span>
+        <span>О приложении</span>
+      </a>
+    </nav>
+
+    <div class="drawer-footer">
+      <button class="drawer-item danger" id="drawerLogout">
+        <span class="drawer-icon">🚪</span>
+        <span>Выйти</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="app">
+
+    <div class="chat-menu-overlay" id="chatMenuOverlay"></div>
+    <div class="chat-menu" id="chatMenu">
+      <div class="chat-menu-handle"></div>
+      <div class="chat-menu-title" id="chatMenuTitle">Чат</div>
+
+      <button class="chat-menu-btn" id="menuSearch">
+        <span class="chat-menu-icon">🔍</span>
+        <span class="chat-menu-text">Поиск в чате</span>
+      </button>
+
+      <button class="chat-menu-btn" id="menuCall">
+        <span class="chat-menu-icon">📞</span>
+        <span class="chat-menu-text">Позвонить</span>
+      </button>
+
+      <button class="chat-menu-btn" id="menuPin">
+        <span class="chat-menu-icon">📌</span>
+        <span class="chat-menu-text">Закрепить</span>
+      </button>
+
+      <button class="chat-menu-btn" id="menuBlock">
+        <span class="chat-menu-icon">🚫</span>
+        <span class="chat-menu-text">Заблокировать</span>
+      </button>
+
+      <button class="chat-menu-btn danger" id="menuDelete">
+        <span class="chat-menu-icon">🗑️</span>
+        <span class="chat-menu-text">Удалить</span>
+      </button>
+
+      <button class="chat-menu-btn cancel" id="menuCancel">
+        <span class="chat-menu-text">Отмена</span>
+      </button>
+    </div>
+
+    <div class="create-menu-overlay" id="createMenuOverlay"></div>
+    <div class="create-menu" id="createMenu">
+      <div class="chat-menu-handle"></div>
+      <div class="chat-menu-title">Создать</div>
+
+      <button class="chat-menu-btn" id="createGroupBtn">
+        <span class="chat-menu-icon">👥</span>
+        <span class="chat-menu-text">Новая группа</span>
+      </button>
+
+      <button class="chat-menu-btn" id="createChannelBtn">
+        <span class="chat-menu-icon">📢</span>
+        <span class="chat-menu-text">Новый канал</span>
+      </button>
+
+      <button class="chat-menu-btn cancel" id="createCancel">
+        <span class="chat-menu-text">Отмена</span>
+      </button>
+    </div>
+
+    <div class="create-page" id="createPage">
+      <header class="create-page-header">
+        <button class="icon-btn" id="createBackBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <h2 id="createPageTitle">Новая группа</h2>
+      </header>
+
+      <div class="create-page-content">
+        <div class="create-avatar-block">
+          <div class="create-avatar" id="createAvatarPreview">👥</div>
+          <input type="file" id="createAvatarInput" accept="image/*" hidden>
+          <button class="btn" id="createAvatarBtn">📷 Загрузить фото</button>
+        </div>
+
+        <div class="form-block">
+          <label class="form-label">Название</label>
+          <input type="text" id="createNameInput" placeholder="Например: Семья" maxlength="40"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <div class="form-hint" id="createNameStatus"></div>
+        </div>
+
+        <div class="form-block">
+          <label class="form-label">Участники</label>
+          <div class="create-members" id="createMembers"></div>
+          <div class="form-hint" id="createMembersStatus"></div>
+        </div>
+      </div>
+
+      <footer class="create-page-footer">
+        <button class="btn primary" id="createSubmitBtn" disabled>Создать</button>
+      </footer>
+    </div>
+
+    <section class="screen screen-chats" id="screenChats">
+      <header class="top-bar">
+        <button class="icon-btn" id="menuBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn plus-btn" id="createBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="searchBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="title-row">
+        <h1>Чаты</h1>
+        <span class="subtitle" id="messagesCount">— выбери собеседника</span>
+      </div>
+
+      <div class="search-panel" id="searchPanel">
+        <input type="text" id="searchInput" placeholder="Поиск по email или нику..."
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <ul class="search-results" id="searchResults"></ul>
+      </div>
+
+      <ul class="chat-list" id="chatList"></ul>
+    </section>
+
+    <section class="screen screen-chat" id="screenChat" style="display:none;">
+
+      <header class="chat-header">
+        <button class="icon-btn back-btn" id="backBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+
+        <div class="chat-user" id="peerInfoBlock" style="cursor:pointer;">
+          <div class="avatar small" id="peerAvatar">?</div>
+          <div>
+            <div class="chat-user-name" id="peerName">...</div>
+            <div class="chat-user-status" id="peerStatus">…</div>
+          </div>
+        </div>
+
+        <div class="chat-header-actions">
+          <button class="icon-btn" id="chatMenuBtn" title="Меню">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="chat-search-panel" id="chatSearchPanel">
+        <input type="text" id="chatSearchInput" placeholder="Поиск в чате..."
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <span class="chat-search-count" id="chatSearchCount"></span>
+        <button class="chat-search-nav" id="chatSearchPrev" title="Назад">↑</button>
+        <button class="chat-search-nav" id="chatSearchNext" title="Вперёд">↓</button>
+        <button class="chat-search-close" id="chatSearchClose" title="Закрыть">✕</button>
+      </div>
+
+      <div class="messages" id="messages"></div>
+
+      <footer class="chat-footer">
+        <div class="reply-preview" id="replyPreview" style="display:none;">
+          <div class="reply-bar"></div>
+          <div class="reply-content">
+            <div class="reply-name" id="replyName">—</div>
+            <div class="reply-text" id="replyText">—</div>
+          </div>
+          <button class="reply-close" id="replyClose">✕</button>
+        </div>
+
+        <div class="chat-footer-row">
+          <button class="attach-btn" id="circleBtn" title="Видео-кружок">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            </svg>
+          </button>
+
+          <input type="text" id="messageInput" placeholder="Type a message..."
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                 enterkeyhint="send">
+
+          <button class="send-btn" id="sendBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+      </footer>
+
+      <div class="circle-modal" id="circleModal">
+        <div class="circle-modal-overlay" id="circleOverlay"></div>
+
+        <div class="circle-modal-box">
+          <div class="circle-video-wrap">
+            <video id="circleVideo" autoplay playsinline muted></video>
+            <div class="circle-timer" id="circleTimer">0:00 / 0:15</div>
+          </div>
+
+          <div class="circle-controls">
+            <button class="circle-btn-record" id="circleRecord">
+              <div class="circle-btn-inner"></div>
+            </button>
+            <div class="circle-hint" id="circleHint">Нажми, чтобы записать</div>
+          </div>
+
+          <div class="circle-preview-controls" id="circlePreviewControls" style="display:none;">
+            <button class="circle-btn-cancel" id="circleCancel">Отмена</button>
+            <button class="circle-btn-send" id="circleSend">Отправить</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <script src="scripts/firebase-config.js"></script>
+  <script src="scripts/nav.js"></script>
+  <script src="scripts/chat.js"></script>
+</body>
+</html>
